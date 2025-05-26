@@ -1,62 +1,80 @@
 import streamlit as st
+import os
 import requests
 import json
 
-#titre de l'application
-st.title("Recherche numéro de cadastre")
+# Configuration API Google Maps : récupération de la clé API dans les variables d'environnement
+#GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 
-#on recupère l'adresse ou les coordonnées
-longitude = st.text_input("Longitude")
-latitude = st.text_input("Latitude")
+# Fonction pour obtenir les coordonnées GPS à partir d'une adresse via Google Maps API
+def get_coordinates(address):
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={GOOGLE_API_KEY}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        if data['status'] == 'OK':
+            # Extraction de la latitude et longitude dans la réponse JSON
+            location = data['results'][0]['geometry']['location']
+            return location['lat'], location['lng']
+    # Si erreur ou pas de résultat, on renvoie None, None
+    return None, None
 
-if longitude and latitude: #si ils ne sont pas vides
+# Fonction pour obtenir le numéro de cadastre à partir des coordonnées GPS via API IGN
+def get_numero_cadastre(latitude, longitude):
     try:
-        #on transforme en float
-        # pour éviter les erreurs de conversion
+        # Conversion en float pour assurer la bonne format des coordonnées
         longitude = float(longitude)
         latitude = float(latitude)
 
-        #on creer le tableau de données pour covertir apres en json
+        # Création de l'objet géométrique au format GeoJSON (longitude en premier)
         geom = {
             "type": "Point",
             "coordinates": [longitude, latitude]
         }
 
-        #on convertit en json
+        # Conversion de l'objet en chaîne JSON
         geom_json = json.dumps(geom)
 
-        #URL de base de l'API
-        base_url="https://apicarto.ign.fr/api/cadastre/parcelle"
+        # URL de base de l'API cadastre IGN
+        base_url = "https://apicarto.ign.fr/api/cadastre/parcelle"
 
-        #Construction de l'URL complète avec le paramètre geom encodé
-        url=f"{base_url}?geom={requests.utils.quote(geom_json)}"
+        # Construction de l'URL complète avec paramètre geom encodé
+        url = f"{base_url}?geom={requests.utils.quote(geom_json)}"
 
-        #on fait la requete avec get et on recupere la réponse avec le header pour le format JSON
+        # Requête HTTP GET avec header pour recevoir du JSON
         response = requests.get(url, headers={"Accept": "application/json"})
 
-        #on recupère le code de statut de la réponse
-        http_status = response.status_code
-
-        if http_status == 200: #si la requete est ok
-            #on recupère les données en json
+        # Si la réponse est OK, on tente d'extraire le numéro de cadastre
+        if response.status_code == 200:
             data = response.json()
-            
             try:
-                #on recupère le numéro de cadastre 
-                numero_cadastre=data['features'][0]['properties']['numero']
-
-                #affichage du numéro de cadastre
-                st.success(f"Le numéro de cadastre est : {numero_cadastre}")
+                return data['features'][0]['properties']['numero']
             except (IndexError, KeyError):
-                st.error("Aucun numéro de cadastre trouvé pour ces coordonnées.")
-
-        #autre code de statut
+                return None
         else:
-            st.error(f"Erreur API : code {http_status}")
+            return None
 
-    #si les coordonées sont non valides
-    except ValueError:
-        st.error("Merci d’entrer des nombres valides pour longitude et latitude.")
+    except Exception:
+        return None
 
-    except Exception as e:
-        st.error(f"Erreur : {e}")
+# Titre de l'application Streamlit
+st.title("Recherche numéro de cadastre")
+
+# Input utilisateur pour saisir une adresse
+adresse = st.text_input("Entrez une adresse :")
+
+# Si l'adresse est renseignée, on lance la recherche
+if adresse:
+    latitude, longitude = get_coordinates(adresse)  # On récupère latitude et longitude
+
+    if latitude is not None and longitude is not None:  # Si on a bien les coordonnées
+        #st.success(f"Coordonnées GPS trouvées : {latitude}, {longitude}")
+
+        numero = get_numero_cadastre(latitude, longitude)  # Recherche numéro de cadastre
+        if numero:
+            st.success(f"Le numéro de cadastre est : {numero}")
+        else:
+            st.error("Aucun numéro de cadastre trouvé pour ces coordonnées.")
+    else:
+        st.error("Aucune coordonnée trouvée pour cette adresse.")
