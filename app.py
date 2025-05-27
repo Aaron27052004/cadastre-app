@@ -50,7 +50,7 @@ def get_numero_cadastre(latitude, longitude):
             data = response.json()
             
             try:
-                commune= data['features'][0]['properties']['code_com']
+                commune= data['features'][0]['properties']['nom_com']
                 section = data['features'][0]['properties']['section']
                 numero = data['features'][0]['properties']['numero']  
                 numero_complet = f"{commune}-{section}-{numero}"     
@@ -59,7 +59,7 @@ def get_numero_cadastre(latitude, longitude):
                 return None
         else:
             return None
-
+    
     except Exception:
         return None
 
