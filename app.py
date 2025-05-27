@@ -48,8 +48,13 @@ def get_numero_cadastre(latitude, longitude):
         # Si la réponse est OK, on tente d'extraire le numéro de cadastre
         if response.status_code == 200:
             data = response.json()
+            
             try:
-                return data['features'][0]['properties']['numero']
+                commune= data['features'][0]['properties']['code_com']
+                section = data['features'][0]['properties']['section']
+                numero = data['features'][0]['properties']['numero']  
+                numero_complet = f"{commune}-{section}-{numero}"     
+                return numero_complet
             except (IndexError, KeyError):
                 return None
         else:
@@ -71,9 +76,9 @@ if adresse:
     if latitude is not None and longitude is not None:  # Si on a bien les coordonnées
         #st.success(f"Coordonnées GPS trouvées : {latitude}, {longitude}")
 
-        numero = get_numero_cadastre(latitude, longitude)  # Recherche numéro de cadastre
-        if numero:
-            st.success(f"Le numéro de cadastre est : {numero}")
+        numero_cadastre = get_numero_cadastre(latitude, longitude)  # Recherche numéro de cadastre
+        if numero_cadastre:
+            st.success(f"Le numéro de cadastre est : {numero_cadastre}")
         else:
             st.error("Aucun numéro de cadastre trouvé pour ces coordonnées.")
     else:
