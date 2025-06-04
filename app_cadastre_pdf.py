@@ -23,7 +23,7 @@ def get_coordinates(address):
     # Si erreur ou pas de résultat, on renvoie None, None
     return None, None
 
-def get_bbox(lat, lon, delta=0.001):
+def get_bbox(lat, lon, delta=0.002):
     # Construire un BBOX autour du point (lat, lon)
     # WMS 1.3.0 en EPSG:4326 utilise l'ordre : lat_min, lon_min, lat_max, lon_max
     return (lat - delta, lon - delta, lat + delta, lon + delta)
@@ -31,7 +31,7 @@ def get_bbox(lat, lon, delta=0.001):
 def get_wms_image(bbox, width=800, height=800):
     base_url = "https://data.geopf.fr/wms-r"
     params = {
-        'LAYERS': 'CADASTRALPARCELS.PARCELLAIRE_EXPRESS',  # Vérifie le nom exact de la couche
+        'LAYERS': 'CADASTRALPARCELS.PARCELS',  # Vérifie le nom exact de la couche
         'FORMAT': 'image/png',
         'SERVICE': 'WMS',
         'VERSION': '1.3.0',
@@ -76,7 +76,7 @@ adresse = st.text_input("Entrez une adresse :")
 if adresse:
     latitude, longitude = get_coordinates(adresse)
     if latitude is not None and longitude is not None:
-        st.success(f"Coordonnées GPS trouvées : {latitude}, {longitude}")
+        #st.success(f"Coordonnées GPS trouvées : {latitude}, {longitude}")
 
         bbox = get_bbox(latitude, longitude)
         image = get_wms_image(bbox)
@@ -87,7 +87,7 @@ if adresse:
         st.download_button(
             label="Télécharger la carte en PDF",
             data=pdf_file,
-            file_name="carte_cadastrale.pdf",
+            file_name=f"carte_cadastrale_{adresse}.pdf",
             mime="application/pdf"
         )
 
